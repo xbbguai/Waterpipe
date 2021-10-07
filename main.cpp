@@ -6,6 +6,10 @@
 #include "ScoreBoard.hpp"
 #include <stdlib.h>
 
+#include "EdgeDetector.hpp"
+#include "Counter.hpp"
+#include "Timer.hpp"
+
 #define Linux 0
 #define macOS 1
 
@@ -19,8 +23,9 @@ int main(int, char**)
     Base::CreateToWaterpipe<Attacker>();
     Base::CreateToWaterpipe<Fort>();
     Base::CreateToWaterpipe<ScoreBoard>();
-    
+
     Base::StartLoop(); 
+
 #if macOS
     system("stty -f /dev/tty raw -echo");
 #elif Linux
@@ -29,7 +34,8 @@ int main(int, char**)
     while (true)
     {
         char ch = getchar();
-        Base::EmitMessage(nullptr, nullptr, KEYBOARD, ch);
+        if (ch > 0)
+            Base::EmitMessage(nullptr, nullptr, KEYBOARD, ch);
 
         if (ch == 'q' || ch == 'Q')
             break;

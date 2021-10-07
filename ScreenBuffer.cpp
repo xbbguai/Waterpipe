@@ -20,6 +20,7 @@ void ScreenBuffer::Clear()
 
 void ScreenBuffer::BlitToScreen()
 {
+//    return;
     char currentColor = -1;
     for (int y = 0; y < screenHeight; y++)
     {

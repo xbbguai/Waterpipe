@@ -1,3 +1,5 @@
+#pragma once
+
 #include "Base.h"
 #include "ScreenBuffer.h"
 #include "defines.h"
@@ -22,7 +24,7 @@ BEGIN_WHEN_DEF
 
     when(counter % 10)
     {
-        sprintf(buffer, "HIT: %04d  LOST: %04d      LOOP TIME USED: %dms OF %dms  ", hits, lost, GetLoopTimeUsed(), GetPollingInterval());
+        sprintf(buffer, "HIT: %04d  LOST: %04d    LOOP TIME: %dms  PEAK: %dms   OBJECTS COUNT: %d", hits, lost, GetLoopTimeUsed(), GetLoopTimePeak(), GetObjectCount());
 
         screenBuffer->Print(0, 0, buffer, 7);
     }

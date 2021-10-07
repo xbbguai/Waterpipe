@@ -6,11 +6,13 @@ using namespace Waterpipe;
 volatile bool Base::run = true;
 volatile bool Base::enableLoop = false;
 
-std::vector<std::shared_ptr<Base>> Base::loopDrivenObjects;
+std::vector<Base::WaterPipeObject> Base::waterPipeObjects;
 std::thread Base::loopThread(Base::LoopAll);
 std::mutex Base::mtxLoopObj;
 int Base::loopInterval = 10; //10 ms
 int Base::loopTimeUsed = 0;
+
+int Base::peak = 0;
 
 std::queue<Message> Base::messageQueue;
 std::mutex Base::mtxQueue;
@@ -39,17 +41,18 @@ void Base::LoopAll()
             // 1) Will be no dead locks. 
             // 2) Objects will not be destroied because they are now in the copy. 
             //    It will be safe to call __W_h_e_n__ without worrying objects being removed from waterpipe and destroied.
-            std::vector<std::shared_ptr<Base>> objects;
+            std::vector<Base::WaterPipeObject> objects;
             std::unique_lock locker(mtxLoopObj);
-            objects = loopDrivenObjects;
+            objects = waterPipeObjects;
             locker.unlock();
             for (auto &obj : objects)
-                obj->__W_h_e_n_s__();
+                obj.obj->__W_h_e_n_s__();
         }
         //Sleep until next loop
         loopTimeUsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - timeStart).count();
         if (loopTimeUsed < loopInterval)
             std::this_thread::sleep_for(std::chrono::milliseconds(loopInterval - loopTimeUsed));
+        peak = std::max(peak, loopTimeUsed);
     }
 }
 
@@ -67,15 +70,27 @@ void Base::MessagePump()
             queueLock.unlock();
 
             if (msg.receiver == nullptr)
-            {
-                //Broadcast to all objects.
+            {               
                 //The same consideration as polling loop. See comments of LoopAll().
-                std::vector<std::shared_ptr<Base>> objCopy;
+                std::vector<WaterPipeObject> objCopy;
                 std::unique_lock loopLock(mtxLoopObj);
-                objCopy = loopDrivenObjects;
+                objCopy = waterPipeObjects;
                 loopLock.unlock();
-                for (auto &obj : objCopy)
-                    obj->__M_e_s_s_a_g_e_s__(msg);
+                if (msg.receiverRTTIName.empty())
+                {
+                    //Broadcast to all objects.
+                    for (auto &obj : objCopy)
+                        obj.obj->__M_e_s_s_a_g_e_s__(msg);
+                }
+                else
+                {
+                    //Broadcast to objects with RTTI(Run-time type idenfitier, the run-time class name of an object) name matches.
+                    for (int i = 0; i < objCopy.size(); i++)
+                    {
+                        if (objCopy[i].classRTTIName == msg.receiverRTTIName)
+                            objCopy[i].obj->__M_e_s_s_a_g_e_s__(msg);
+                    }
+                }
             }
             else
                 msg.receiver->__M_e_s_s_a_g_e_s__(msg);

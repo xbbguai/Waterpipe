@@ -23,12 +23,14 @@ namespace Waterpipe
 #define end_async });
 #define END_MESSAGE_DEF }}
 
+#define null_for_broadcast static_cast<shared_ptr<Base>>(nullptr)
 class Base;
 
 //Structure of the message.
 struct Message
 {
     std::shared_ptr<Base> receiver {nullptr};       //Receiver object. Be nullptr if broadcasts.
+    std::string receiverRTTIName {};                //Receiver class type_info name. If set, the objects of this class will receive the message.
     std::shared_ptr<Base> sender {nullptr};         //Sender object. Be nullptr if not used.
     int idMsg {0};                                  //Message ID.
     int param {0};                                  //Parameter of the message.
@@ -49,14 +51,20 @@ private:
     volatile static bool run;
     volatile static bool enableLoop;
 
+    struct WaterPipeObject
+    {
+        std::shared_ptr<Base> obj;
+        std::string classRTTIName;
+    };
     //---------------------------------------------------------
     //Members required to build the polling loop.
     //The container of all Base-derived objects.
     static std::mutex mtxLoopObj;
-    static std::vector<std::shared_ptr<Base>> loopDrivenObjects;
+    static std::vector<WaterPipeObject> waterPipeObjects;
     //This is the interval of each polling loop. Similar to a PLC loop.
     static int loopInterval;
     static int loopTimeUsed;
+    static int peak;
     //The loop thread.
     static void LoopAll();
     static std::thread loopThread;
@@ -82,7 +90,7 @@ public:
                             void* data = nullptr,
                             std::function<void(const Message msg)> receipt = nullptr)
     {
-        Message msg {receiver, sender, idMsg, param, data, receipt};
+        Message msg {receiver, "", sender, idMsg, param, data, receipt};
         EmitMessage(msg);
     }
 
@@ -92,8 +100,18 @@ public:
                     void* data = nullptr, 
                     std::function<void(const Message msg)> receipt = nullptr)
     {
-        Message msg {receiver, shared_from_this(), idMsg, param, data, receipt};
+        Message msg {receiver, "", shared_from_this(), idMsg, param, data, receipt};
         EmitMessage(msg);
+    }
+
+    void EmitMessage(std::string RTTIName,
+                    const int idMsg,
+                    const int param = 0,
+                    void* data = nullptr, 
+                    std::function<void(const Message msg)> receipt = nullptr)
+    {
+        Message msg {nullptr, RTTIName, shared_from_this(), idMsg, param, data, receipt};
+        EmitMessage(msg);       
     }
 
     //Polling loop will not start until StartLoop is called.
@@ -121,8 +139,8 @@ public:
         loopThread.join();
         pumpThread.join();
         //Empty the container
-        loopDrivenObjects.clear();
-        //So weared that there is no method to empty a queue.
+        waterPipeObjects.clear();
+        //So weaired that there is no method to empty a queue.
         while (!messageQueue.empty())
             messageQueue.pop();
     }
@@ -142,21 +160,35 @@ public:
         return loopTimeUsed;
     }
 
+    static int GetLoopTimePeak()
+    {
+        return peak;
+    }
+
+    static void ResetLoopTimePeak()
+    {
+        peak = 0;
+    }
+
     static float GetLoopTimePercentUsage()
     {
         return (float)loopTimeUsed / loopInterval * 100;
+    }
+
+    static int GetObjectCount()
+    {
+        return waterPipeObjects.size();
     }
 public:
     Base();
     ~Base();
 
     //Use this to create an object of a Base-derived class and insert it into waterpipe.
-     template<typename T, typename... Args>
+    template<typename T, typename... Args>
     static std::shared_ptr<T> CreateToWaterpipe(Args... args)
     {
         std::shared_ptr<T> obj = std::make_shared<T>(args...);
-        std::lock_guard lockerLoop(mtxLoopObj);
-        Base::loopDrivenObjects.push_back(obj);
+        InsertIntoWaterpipe(obj);
         return obj;
     }
 
@@ -166,7 +198,8 @@ public:
     static void InsertIntoWaterpipe(std::shared_ptr<T> obj)
     {
         std::lock_guard lockerLoop(mtxLoopObj);
-        Base::loopDrivenObjects.push_back(obj);
+        WaterPipeObject wpObj {obj, typeid(T).name()};
+        Base::waterPipeObjects.push_back(wpObj);
     }
 
     //Remove an object from waterpipe.
@@ -174,11 +207,13 @@ public:
     static void RemoveFromWaterpipe(std::shared_ptr<T> obj)
     {
         std::lock_guard lockerLoop(mtxLoopObj);
-        for (auto it = loopDrivenObjects.begin(); it != loopDrivenObjects.end(); it++)
+        int i = -1;
+        for (auto it = waterPipeObjects.begin(); it != waterPipeObjects.end(); it++)
         {
-            if (*it == obj)
+            i++;
+            if ((*it).obj == obj)
             {
-                loopDrivenObjects.erase(it);
+                waterPipeObjects.erase(it);
                 break;
             }
         }

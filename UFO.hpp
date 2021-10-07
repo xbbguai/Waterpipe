@@ -1,6 +1,10 @@
+#pragma once
+
 #include "Base.h"
 #include "ScreenBuffer.h"
 #include "defines.h"
+#include "ScoreBoard.hpp"
+#include "Fort.hpp"
 #include <vector>
 
 using namespace Waterpipe;
@@ -31,7 +35,7 @@ BEGIN_WHEN_DEF
         screenBuffer->Print(x, y, ' ');
         y++;
         screenBuffer->Print(x, y, '0', 7);
-        EmitMessage(nullptr, 
+        EmitMessage(null_for_broadcast, 
                     BOMB_POSITION,
                     x << 16 | y,
                     nullptr);
@@ -149,7 +153,7 @@ BEGIN_WHEN_DEF
             Hide();
             EmitMessage(dynamic_pointer_cast<Base>(attacker), DESTROY_OBJECT);
             RemoveFromWaterpipe();
-            EmitMessage(nullptr, HIT);
+            EmitMessage(typeid(ScoreBoard).name(), HIT);
         }
     }
 
@@ -162,7 +166,7 @@ BEGIN_WHEN_DEF
         {
             EmitMessage(dynamic_pointer_cast<Base>(attacker), DESTROY_OBJECT);
             RemoveFromWaterpipe();
-            EmitMessage(nullptr, LOST);
+            EmitMessage(typeid(ScoreBoard).name(), LOST);
         }
         else
         {

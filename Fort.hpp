@@ -1,7 +1,10 @@
+#pragma once
+
 #include "Base.h"
 #include "ScreenBuffer.h"
 #include <iostream>
 #include "defines.h"
+#include "UFO.hpp"
 
 using namespace Waterpipe;
 using namespace std;
@@ -35,7 +38,7 @@ BEGIN_WHEN_DEF
         screenBuffer->Print(x, y, 'o', 2);
         counter = 0;
         //Broadcast my position. If I hit any enemy, I should vanish myself and get destroied.
-        EmitMessage(nullptr,            //Broadcast. Every object in the Base will get this message.
+        EmitMessage(typeid(UFO).name(), //Broadcast to UFOs. Every object in the Base will get this message.
                     BULLET_POSITION,    //message = BULLET_POSITION 
                     x << 16 | y,        //Position. 
                     nullptr,            //No data attached.
@@ -153,7 +156,7 @@ BEGIN_MESSAGE_DEF
             shot = false;
             screenBuffer->Print(screenWidth / 2 - 4, screenHeight / 2, "         ", 7);
 
-            EmitMessage(nullptr, GAME_START);
+            EmitMessage(null_for_broadcast, GAME_START);
         }
     }
 
@@ -165,7 +168,7 @@ BEGIN_MESSAGE_DEF
         {
             //I'm hit. Game over.
             shot = true;
-            EmitMessage(nullptr, GAME_OVER);
+            EmitMessage(null_for_broadcast, GAME_OVER);
         } 
     }
 END_MESSAGE_DEF

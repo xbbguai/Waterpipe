@@ -65,7 +65,7 @@ BEGIN_WHEN_DEF
                         if (rnd < RAND_MAX / 100)
                         {
                             screen[x][y] = '.';
-                            color[x][y] = rnd % 8;//rand() < RAND_MAX / 2 ? 2 : 7;
+                            color[x][y] = rnd % 8;
                         }
                         else
                         {
