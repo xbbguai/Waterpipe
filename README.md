@@ -8,7 +8,7 @@ There are rising/falling edge detector, timer and counter classes included.
 Other files make up a test console game using Waterpipe.
 This game is tested on macOS and Ubuntu Linux, but it will not run on Windows due to terminal compatibility problems.
 
-10/07/2021 Added:
-  EdgeDetector.hpp    Rising/Falling edge detector.
-  Timer.hpp           Timer.
-  Counter.hpp         Counter.
+10/07/2021 Added:<br>
+    EdgeDetector.hpp  Rising/Falling edge detector.<br>
+    Timer.hpp         Timer.<br>
+    Counter.hpp       Counter.<br>
